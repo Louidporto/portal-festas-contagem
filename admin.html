@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel do Fornecedor - Portal Festas Contagem</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <a href="index.html">⬅ Sair do Painel</a>
+        </nav>
+        <h1>⚙️ Painel do Fornecedor</h1>
+        <p>Cadastre seus brinquedos para o Portal de Contagem</p>
+    </header>
+
+    <main class="container">
+        <section class="card-form">
+            <h2>Cadastrar Novo Brinquedo</h2>
+            <form id="form-cadastro">
+                <input type="text" id="nome-brinquedo" placeholder="Ex: Cama Elástica 3m" required>
+                <textarea id="descricao-brinquedo" placeholder="Descreva o brinquedo (tamanho, idade, etc.)" required></textarea>
+                <input type="number" id="valor-brinquedo" placeholder="Valor sugerido (R$)" required>
+                <input type="tel" id="whatsapp-dono" placeholder="Seu WhatsApp (Ex: 31988887777)" required>
+                
+                <button type="submit" id="btn-cadastrar">🚀 Lançar no Portal</button>
+            </form>
+        </section>
+
+        <section class="meus-itens">
+            <h2>Seus Brinquedos Ativos</h2>
+            <div id="lista-meus-brinquedos">
+                </div>
+        </section>
+    </main>
+
+    <script src="firebase-config.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
