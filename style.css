@@ -228,26 +228,36 @@ body {
 }
 
 /* --- CALENDÁRIO & MODAL --- */
-/* Garante que o modal se adapte ao celular */
-.modal-content {
-    width: 95% !important;
-    max-width: 500px;
-    margin: 10px auto;
-    padding: 15px;
-    max-height: 90vh; /* Não deixa o modal sumir para baixo da tela */
+/* Garante que o fundo escuro cubra TUDO */
+#modal-calendario {
+    display: none; 
+    position: fixed !important; /* Força a posição fixa */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85) !important;
+    z-index: 99999 !important; /* Camada máxima */
     overflow-y: auto;
-    z-index: 9999 !important; /* Força o modal a ficar acima de tudo */
+    -webkit-overflow-scrolling: touch; /* Suaviza scroll no iPhone */
 }
-
+/* Garante que o conteúdo do calendário apareça */
 .modal-content {
-    background: white;
-    margin: 5% auto;
-    padding: 30px;
-    width: 90%;
-    max-width: 650px;
-    border-radius: 25px;
+    background: #fff;
+    margin: 20px auto;
+    width: 95%;
+    max-width: 500px;
+    border-radius: 12px;
+    padding: 15px;
     position: relative;
-    z-index: 10000 !important; /* Conteúdo acima do fundo do modal */
+    z-index: 100000 !important;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+/* Ajuste para o FullCalendar não sumir no branco */
+#calendario-view {
+    min-height: 300px;
+    background: white;
+    color: #333;
 }
 
 .close {
