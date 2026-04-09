@@ -147,8 +147,7 @@ body {
 }
 
 .input-group {
-    display: flex;
-    gap: 10px;
+    display: flex;    
     margin-top: 20px;
 }
 
