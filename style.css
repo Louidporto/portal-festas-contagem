@@ -228,15 +228,13 @@ body {
 }
 
 /* --- CALENDÁRIO & MODAL --- */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.7);
+/* Garante que o modal se adapte ao celular */
+.modal-content {
+    width: 95% !important;
+    max-width: 500px;
+    margin: 10px auto;
+    padding: 15px;
+    max-height: 90vh; /* Não deixa o modal sumir para baixo da tela */
     overflow-y: auto;
 }
 
@@ -258,8 +256,38 @@ body {
     cursor: pointer;
 }
 
+/* Ajuste para inputs de data no mobile */
+input[type="date"] {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 45px; /* Altura boa para o toque do dedo */
+    background-color: #fff;
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    width: 100%; /* Garante que não "vaze" do card */
+    display: block;
+    position: relative;
+}
+
+/* Garante que o ícone do calendário não quebre o layout */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    padding: 5px;
+}
+
 /* CORES FORTES NO CALENDÁRIO */
-.fc-daygrid-day { background-color: #d4edda !important; } /* Verde suave livre */
+/* Ajusta o tamanho das células do FullCalendar para dedos */
+.fc-daygrid-day-number {
+    font-size: 1.1em;
+    padding: 8px !important;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.2em !important;
+}
 
 .fc-bg-event { 
     opacity: 1 !important; 
