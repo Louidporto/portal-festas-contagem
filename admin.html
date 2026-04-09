@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Portal Festas CTG</title>
+    <link rel="stylesheet" href="style2.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<header>
+    <h1><i class="fas fa-tools"></i> Painel Administrativo</h1>
+    <nav class="tabs-menu">
+        <button class="tab-btn active" onclick="abrirAba(event, 'aba-produtos')">
+            <i class="fas fa-boxes"></i> <span>Produtos</span>
+        </button>
+        <button class="tab-btn" onclick="abrirAba(event, 'aba-solicitacoes')">
+            <i class="fas fa-bell"></i> <span>Solicitações</span>
+            <span id="badge-notificacao" class="badge">!</span>
+        </button>
+        <button class="tab-btn" onclick="abrirAba(event, 'aba-agendamentos')">
+            <i class="fas fa-calendar-check"></i> <span>Agenda</span>
+        </button>        
+        <button class="tab-btn" onclick="abrirAba(event, 'aba-historico')">
+            <i class="fas fa-history"></i> <span>Histórico</span>
+        </button>
+    </nav>
+</header>
+
+<main>
+    <div id="aba-produtos" class="tab-content active aba-produtos">
+        <div class="header-aba">
+            <h2>Meus Equipamentos</h2>
+            <button class="btn-novo" onclick="abrirModal()"><i class="fas fa-plus"></i> Novo Item</button>
+        </div>
+        <div id="grid-produtos" class="grid-layout"></div>
+    </div>
+
+    <div id="aba-solicitacoes" class="tab-content aba-solicitacoes">
+        <div class="header-aba">
+            <div>
+                <h2>Pendentes de Aprovação</h2>
+                <p style="font-size: 0.8em; color: #666;">Confirme para reservar a data automaticamente.</p>
+            </div>
+        </div>
+        <div id="lista-solicitacoes-pendentes" class="grid-layout"></div>
+    </div>
+
+    <div id="aba-agendamentos" class="tab-content aba-agenda">
+        <div class="header-aba">
+            <h2>Datas Ocupadas</h2>
+        </div>
+        <div id="grid-reservas" class="grid-layout"></div>
+    </div>
+    <div id="aba-historico" class="tab-content">
+        <div class="header-aba">
+            <h2>Histórico de Locações</h2>
+        </div>
+    <div id="grid-historico" class="grid-layout"></div>
+</div>
+</main>
+
+<div id="modal-cadastro" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="fecharModal()">&times;</span>
+        <h2><i class="fas fa-plus-circle"></i> Cadastrar Produto</h2>
+        <form id="form-cadastro">
+            <div class="campo-grupo">
+                <label>Nome do Brinquedo</label>
+                <input type="text" id="nome-brinquedo" required>
+            </div>
+            <div class="campo-grupo">
+                <label>Link da Foto (URL)</label>
+                <input type="url" id="imagem-brinquedo" placeholder="http://...">
+            </div>
+            <div class="campo-grupo">
+                <label>Descrição</label>
+                <textarea id="descricao-brinquedo"></textarea>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <div class="campo-grupo" style="flex:1">
+                    <label>Valor R$</label>
+                    <input type="number" id="valor-brinquedo">
+                </div>
+                <div class="campo-grupo" style="flex:1">
+                    <label>WhatsApp</label>
+                    <input type="tel" id="whatsapp-dono">
+                </div>
+            </div>
+            <button type="submit" class="btn-acao-principal">Salvar Produto</button>
+        </form>
+    </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="firebase-config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

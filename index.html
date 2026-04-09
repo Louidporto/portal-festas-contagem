@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Camila Brinquedos - Diversão Garantida</title>    
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">    
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />    
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* Seus ajustes de emergência do calendário */
+        #calendario-view {
+            min-height: 400px !important;
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+
+<header class="main-header">
+    <div class="logo-container">
+        <i class="fas fa-magic"></i> 
+        <h1>Portal festas</h1>
+        <p>Transformando festas em memórias inesquecíveis</p>
+    </div>
+</header>
+
+<section class="marketing-gallery">
+    <div class="gallery-track">
+        <div class="gallery-item"><img src="https://www.artealegria.com.br/wp-content/uploads/2023/04/DSC_2316.jpg" alt="Festa"></div>
+        <div class="gallery-item"><img src="https://www.artealegria.com.br/wp-content/uploads/2019/06/DSC_5258.jpg" alt="Festa"></div>
+        <div class="gallery-item"><img src="https://giseledecor.com.br/wp-content/uploads/2025/04/IMG_20250419_132522-scaled.jpg" alt="Festa"></div>
+        <div class="gallery-item"><img src="https://www.artealegria.com.br/wp-content/uploads/2023/04/DSC_2316.jpg" alt="Festa"></div>
+        <div class="gallery-item"><img src="https://www.artealegria.com.br/wp-content/uploads/2019/06/DSC_5258.jpg" alt="Festa"></div>
+        <div class="gallery-item"><img src="https://giseledecor.com.br/wp-content/uploads/2025/04/IMG_20250419_132522-scaled.jpg" alt="Festa"></div>
+        <div class="gallery-item"><img src="https://www.artealegria.com.br/wp-content/uploads/2023/04/DSC_2316.jpg" alt="Festa"></div>           
+    </div>
+</section>
+
+<nav class="portal-menu">
+    <button onclick="alternarSecao('catalogo')" id="btn-catalogo" class="nav-btn active">
+        <i class="fas fa-trampoline"></i> Catálogo
+    </button>
+    <button onclick="alternarSecao('solicitacoes')" id="btn-solicitacoes" class="nav-btn">
+        <i class="fas fa-clipboard-list"></i> Minhas Solicitações
+    </button>
+</nav>
+
+<main class="container">
+    
+    <section id="secao-catalogo" class="content-section">
+        <div id="lista-brinquedos" class="grid-layout">
+            </div>
+    </section>
+
+    <section id="secao-solicitacoes" class="content-section" style="display: none;">
+        <div class="search-box">
+            <h3>Acompanhe seus pedidos</h3>
+            <p>Digite seu WhatsApp para verificar o status.</p>
+            <div class="input-group">
+                <input type="text" id="cliente-whatsapp-consulta" placeholder="(00) 00000-0000">
+                <button onclick="consultarPedidosCliente()" class="btn-buscar">
+                    <i class="fas fa-search"></i> Consultar
+                </button>
+            </div>
+        </div>
+        <div id="historico-pedidos" class="pedidos-lista"></div>
+    </section>
+
+</main>
+
+<div id="modal-calendario" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="fecharModalCalendario()">&times;</span>
+        <h2 id="nome-produto-modal">Nome do Brinquedo</h2>
+        
+        <div id='calendario-view'></div>
+
+        <div class="form-reserva-cliente" style="margin-top: 20px;">
+            <div class="inputs-reserva">
+                <input type="date" id="reserva-ini" readonly>
+                <span>até</span>
+                <input type="date" id="reserva-fim" readonly>
+            </div>
+
+            <div class="dados-cliente-form" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                <input type="text" id="cliente-nome" placeholder="Seu Nome Completo" required>
+                <input type="tel" id="cliente-fone" placeholder="Seu WhatsApp (apenas números)" required>
+                <input type="text" id="cliente-endereco" placeholder="Endereço da Festa (Rua, Número, Bairro)" required>
+            </div>
+
+            <button onclick="solicitarReserva()" class="btn-solicitar" style="margin-top: 15px;">
+                <i class="fas fa-paper-plane"></i> Enviar Solicitação de Reserva
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/pt-br.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+<script src="firebase-config.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>

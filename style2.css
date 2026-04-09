@@ -1,0 +1,198 @@
+/* ==========================================================================
+   1. CONFIGURAÇÕES GERAIS E VARIÁVEIS
+   ========================================================================== */
+:root {
+    --primary-blue: #0056b3;
+    --success-green: #28a745;
+    --danger-red: #dc3545;
+    --warning-yellow: #f1c40f;
+    --history-gray: #bdc3c7; /* Cor para itens finalizados */
+    --bg-gray: #f4f7f6;
+    --white: #ffffff;
+    --text-dark: #333;
+    --text-light: #666;
+    --shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+* { box-sizing: border-box; } /* Previne erros de largura de input */
+
+body { 
+    font-family: 'Segoe UI', Roboto, sans-serif; 
+    background: var(--bg-gray); 
+    color: var(--text-dark);
+    margin: 0; 
+    padding: 0; 
+}
+
+header { 
+    background: var(--primary-blue); 
+    color: var(--white); 
+    text-align: center; 
+    padding: 25px 20px;
+    border-radius: 0 0 50px 50px;
+}
+
+/* ==========================================================================
+   2. MENU DE NAVEGAÇÃO (TABS)
+   ========================================================================== */
+.tabs-menu {
+    display: flex; 
+    justify-content: space-around;
+    background: var(--white); 
+    padding: 10px 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-radius: 50px 50px 50px 50px;
+}
+
+.tab-btn {
+    border: none; 
+    background: none; 
+    color: var(--text-light);
+    display: flex; 
+    flex-direction: column; 
+    align-items: center;
+    cursor: pointer; 
+    font-size: 0.85em; 
+    transition: 0.3s;
+    position: relative;
+    flex: 1;
+}
+
+.tab-btn i { font-size: 1.6em; margin-bottom: 4px; }
+.tab-btn.active { color: var(--primary-blue); font-weight: bold; }
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    width: 60%;
+    height: 3px;
+    background: var(--primary-blue);
+}
+
+.badge {
+    position: absolute;
+    top: 0;
+    right: 25%;
+    background: var(--danger-red);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: bold;
+    display: none;
+}
+
+/* Conteúdo das Abas */
+.tab-content { display: none; padding: 20px; animation: fadeIn 0.4s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==========================================================================
+   3. LAYOUT DE GRIDS E ESTRUTURA
+   ========================================================================== */
+.header-aba {
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center;
+    max-width: 1200px; 
+    margin: 0 auto 20px auto; 
+    padding: 0 10px;
+}
+
+.grid-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 25px; 
+    max-width: 1200px; 
+    margin: 0 auto;
+}
+
+/* ==========================================================================
+   4. CARDS PADRONIZADOS (O CORAÇÃO DO SISTEMA)
+   ========================================================================== */
+.card-padrao {
+    background: var(--white); 
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column;
+    min-height: 420px;
+    transition: transform 0.2s;
+}
+
+.card-padrao:hover { transform: translateY(-5px); }
+.img-card { width: 100%; height: 180px; object-fit: cover; background: #eee; }
+.conteudo-card { padding: 15px; flex-grow: 1; display: flex; flex-direction: column; }
+.conteudo-card h3 { margin: 0 0 10px 0; font-size: 1.1em; }
+
+/* Variações de Cores por Aba */
+#aba-produtos .card-padrao { border-top: 5px solid var(--primary-blue); }
+#aba-solicitacoes .card-padrao { border-top: 5px solid var(--warning-yellow); }
+#aba-agenda .card-padrao { border-top: 5px solid var(--success-green); }
+#aba-historico .card-padrao { border-top: 5px solid var(--history-gray); opacity: 0.85; }
+
+/* Cores de Títulos */
+#aba-produtos h3 { color: var(--primary-blue); }
+#aba-solicitacoes h3 { color: var(--warning-yellow); }
+#aba-agenda h3 { color: var(--success-green); }
+#aba-historico h3 { color: var(--text-dark); }
+
+/* Informações Internas */
+.detalhes-info { font-size: 0.85em; color: var(--text-light); line-height: 1.6; margin-bottom: 15px; }
+.detalhes-info i { width: 22px; color: #999; text-align: center; }
+
+/* ==========================================================================
+   5. BOTÕES E AÇÕES
+   ========================================================================== */
+.acoes-card {
+    margin-top: auto;
+    display: flex;
+    gap: 8px;
+    padding-top: 10px;
+}
+
+.btn-novo { background: var(--primary-blue); color: var(--white); border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.btn-confirmar { background: var(--success-green); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; flex: 2; font-weight: bold; }
+.btn-recusar { background: #fdf2f2; color: var(--danger-red); border: 1px solid #fee2e2; padding: 10px; border-radius: 6px; cursor: pointer; flex: 1; }
+.btn-lixo { background: none; border: none; color: var(--danger-red); cursor: pointer; font-size: 1.1em; }
+
+/* Botão de Finalizar na Agenda */
+#aba-agenda .btn-confirmar { background: var(--primary-blue); }
+
+/* ==========================================================================
+   6. COMPONENTES ESPECÍFICOS (MODAL E BLOQUEIO)
+   ========================================================================== */
+.modal {
+    display: none;
+    position: fixed; z-index: 9999;
+    left: 0; top: 0; width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px);
+}
+
+.modal-content { 
+    background: var(--white); margin: 50px auto; padding: 30px; 
+    border-radius: 15px; width: 90%; max-width: 450px; position: relative; 
+}
+
+.campo-grupo { margin-bottom: 15px; }
+.campo-grupo label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; }
+.campo-grupo input, .campo-grupo textarea { 
+    width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px;
+}
+
+.area-bloqueio { margin-top: 15px; padding-top: 10px; border-top: 1px dashed #ddd; }
+.row-bloqueio-duplo { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+
+/* Aviso de lista vazia */
+.aviso { grid-column: 1/-1; text-align: center; padding: 40px; color: #999; font-style: italic; }
+
+/* Responsividade */
+@media (min-width: 600px) {
+    .row-bloqueio-duplo { flex-direction: row; }
+    .row-bloqueio-duplo input { flex: 1; }
+}
