@@ -289,6 +289,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
     padding: 5px;
 }
+#calendario-view {
+    height: 320px; /* Força uma altura fixa compacta */
+    overflow: hidden; /* Evita scrolls internos chatos */
+}
 
 /* CORES FORTES NO CALENDÁRIO */
 /* Ajusta o tamanho das células do FullCalendar para dedos */
