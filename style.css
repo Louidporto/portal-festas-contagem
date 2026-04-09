@@ -147,7 +147,8 @@ body {
 }
 
 .input-group {
-    display: flex;    
+    display: flex; 
+    flex-direction: column; /* Alinha os itens um abaixo do outro */
     margin-top: 20px;
 }
 
@@ -158,15 +159,28 @@ body {
     border-radius: 12px;
     outline: none;
 }
+#cliente-whatsapp-consulta {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+}
 
 .btn-buscar {
-    background: var(--primary-blue);
+    width: 100%;            /* Botão ocupa a largura total para facilitar o toque */
+    background-color: var(--primary-blue);
     color: white;
     border: none;
-    padding: 0 25px;
-    border-radius: 12px;
-    cursor: pointer;
+    padding: 14px;
+    border-radius: 8px;
     font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.btn-buscar:active {
+    background-color: #004494; /* Feedback de clique no mobile */
+    transform: scale(0.98);
 }
 .card-pedido-cliente {
     background: white;
