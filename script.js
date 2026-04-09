@@ -111,13 +111,23 @@ function renderizarCalendario(idProduto) {
             calendarioInstancia.destroy();
         }
 
-        calendarioInstancia = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'pt-br',
-            selectable: true,
-            longPressDelay: 0, // Resposta imediata ao toque
-            headerToolbar: { left: 'prev,next', center: 'title', right: '' },
-            events: eventosOcupados,
+            calendarioInstancia = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'pt-br',
+                selectable: true,
+                longPressDelay: 0,
+                
+                // --- AJUSTES DE TAMANHO ---
+                aspectRatio: 1.35,      /* Aumentar esse número achata o calendário */
+                contentHeight: 'auto',  /* Faz o calendário se ajustar ao tamanho das células */
+                // --------------------------
+            
+                headerToolbar: { 
+                    left: 'prev,next', 
+                    center: 'title', 
+                    right: '' 
+                },
+                events: eventosOcupados,
             select: function(info) {
                 document.getElementById('reserva-ini').value = info.startStr;
                 let dFim = new Date(info.end);
