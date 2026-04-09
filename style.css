@@ -255,9 +255,9 @@ body {
 }
 /* Ajuste para o FullCalendar não sumir no branco */
 #calendario-view {
-    min-height: 300px;
-    background: white;
-    color: #333;
+    max-width: 90%;      /* Não gruda nas bordas do modal */
+    margin: 0 auto;       /* Centraliza */
+    font-size: 0.85em;    /* Diminui a fonte geral (números e dias) */
 }
 
 .close {
@@ -297,8 +297,18 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     padding: 8px !important;
 }
 
+/* Ajustar a altura das células para o calendário ficar mais "achatado" */
+.fc .fc-daygrid-day {
+    height: 45px !important; /* Altura menor para as células */
+}
+
+/* Diminuir o cabeçalho (Título e botões Próximo/Anterior) */
+.fc .fc-toolbar {
+    margin-bottom: 5px !important;
+    padding: 5px !important;
+}
 .fc .fc-toolbar-title {
-    font-size: 1.2em !important;
+    font-size: 1.1em !important;
 }
 
 .fc-bg-event { 
@@ -309,6 +319,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .fc-highlight {
     background-color: #3498db !important; /* Azul seleção */
     opacity: 0.8 !important;
+}
+.fc .fc-button {
+    padding: 4px 8px !important; /* Botões menores */
+    font-size: 0.8em !important;
 }
 
 .btn-solicitar {
