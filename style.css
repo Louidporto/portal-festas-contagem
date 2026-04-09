@@ -236,6 +236,7 @@ body {
     padding: 15px;
     max-height: 90vh; /* Não deixa o modal sumir para baixo da tela */
     overflow-y: auto;
+    z-index: 9999 !important; /* Força o modal a ficar acima de tudo */
 }
 
 .modal-content {
@@ -246,6 +247,7 @@ body {
     max-width: 650px;
     border-radius: 25px;
     position: relative;
+    z-index: 10000 !important; /* Conteúdo acima do fundo do modal */
 }
 
 .close {
