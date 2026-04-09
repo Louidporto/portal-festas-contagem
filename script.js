@@ -124,7 +124,7 @@ function renderizarCalendario(idProduto) {
         calendarioInstancia.render();
         
         // Pequeno truque para garantir que o calendário desenhe o tamanho certo no mobile
-        setTimeout(() => { calendarioInstancia.updateSize(); }, 200);
+        setTimeout(() => { calendarioInstancia.updateSize(); }, 50);
     });
 }
 
