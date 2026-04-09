@@ -72,15 +72,16 @@ function abrirAgenda(idProduto) {
         produtoSelecionado = { id: idProduto, ...dados };
         
         document.getElementById('nome-produto-modal').innerText = produtoSelecionado.nome;
-        document.getElementById('reserva-ini').value = "";
-        document.getElementById('reserva-fim').value = "";
-        document.getElementById('calendario-view').innerHTML = "";
+        
+        // 1. Primeiro, mostramos o modal
+        const modal = document.getElementById('modal-calendario');
+        modal.style.display = 'block';
 
-        document.getElementById('modal-calendario').style.display = 'block';
-
-        setTimeout(() => {
+        // 2. Aguardamos um fôlego para o navegador desenhar o modal e só então renderizamos o calendário
+        // O requestAnimationFrame é mais preciso que o setTimeout para isso
+        requestAnimationFrame(() => {
             renderizarCalendario(idProduto);
-        }, 300);
+        });
     });
 }
 
