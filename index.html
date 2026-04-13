@@ -25,9 +25,8 @@
 <body>
 
 <header class="main-header">
-    <div class="logo-container">
-        <i class="fas fa-magic"></i> 
-        <h1>Portal festas</h1>
+    <div class="logo-container">         
+        <h1><i class="fas fa-magic"></i>Portal festas</h1>
         <p>Transformando festas em memórias inesquecíveis</p>
     </div>
 </header>
@@ -54,6 +53,19 @@
 </nav>
 
 <main class="container">
+
+    <div class="filtro-container">
+        <label for="filtro-categoria"><i class="fas fa-filter"></i> Filtrar por:</label>
+        <select id="filtro-categoria" onchange="carregarCardapio()">
+            <option value="todos">Todos</option>
+            <option value="Brinquedos">Brinquedos</option>
+            <option value="Itens de Decoraçao">Itens de Decoraçao</option>
+            <option value="Infláveis">Infláveis</option>
+            <option value="Jogos">Jogos</option>
+            <option value="Mesas e Cadeiras">Mesas e Cadeiras</option>
+            
+        </select>
+    </div>
     
     <section id="secao-catalogo" class="content-section">
         <div id="lista-brinquedos" class="grid-layout">
@@ -93,7 +105,7 @@
             <div class="dados-cliente-form" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
                 <input type="text" id="cliente-nome" placeholder="Seu Nome Completo" required>
                 <input type="tel" id="cliente-fone" placeholder="Seu WhatsApp (apenas números)" required>
-                <input type="text" id="cliente-endereco" placeholder="Endereço da Festa (Rua, Número, Bairro)" required>
+                <input type="text" id="cliente-endereco" placeholder="Endereço da Festa (Rua, Número, Bairro, Cidade)" required>
             </div>
 
             <button onclick="solicitarReserva()" class="btn-solicitar" style="margin-top: 15px;">
