@@ -35,50 +35,92 @@ function alternarSecao(secaoAlvo) {
 /**
  * 3. CARREGAR CATÁLOGO (VITRINE)
  */
-function carregarCardapio() {
+// 1. Modifique sua função carregarCardapio para usar .once
+async function carregarCardapio() {
     const lista = document.getElementById('lista-brinquedos');
+    const filtro = document.getElementById('filtro-categoria').value;
+    
     if (!lista) return;
 
-    database.ref('produtos').on('value', snapshot => {
-        lista.innerHTML = "";
-        const produtos = snapshot.val();
-        if (!produtos) return;
+    // Mudamos para .once('value') para que o gatilho externo controle a atualização
+    const snapshot = await database.ref('produtos').once('value');
+    const produtos = snapshot.val();
+    
+    if (!produtos) {
+        lista.innerHTML = "<p>Nenhum produto cadastrado.</p>";
+        return;
+    }
 
-        Object.keys(produtos).forEach(id => {
-            const p = produtos[id];
-            const foto = p.imagem ? p.imagem.split(',')[0] : 'https://via.placeholder.com/300x200';
-            
-            lista.innerHTML += `
-                <div class="card-item-cardapio" onclick="abrirAgenda('${id}')">
-                    <img src="${foto}" class="img-cardapio">
-                    <div class="info-cardapio">
-                        <h3>${p.nome}</h3>
-                        <p>${p.descricao || ""}</p>
-                        <span class="preco-btn">Ver Disponibilidade </span>
+    const dataHoje = new Date().toISOString().split('T')[0];
+    const IDs = Object.keys(produtos);
+
+    const promessas = IDs.map(id => verificarEstoqueDisponivel(id, dataHoje, dataHoje));
+    const estoquesDisponiveis = await Promise.all(promessas);
+
+    lista.innerHTML = ""; 
+
+    IDs.forEach((id, index) => {
+        const p = produtos[id];
+        
+        if (p.status !== "ativo") return;
+        if (filtro !== "todos" && p.categoria !== filtro) return;
+
+        const disponivelAgora = estoquesDisponiveis[index];
+        const foto = p.imagem ? p.imagem.split(',')[0] : 'https://via.placeholder.com/300x200';
+        
+        lista.innerHTML += `
+            <div class="card-item-cardapio" onclick="abrirAgenda('${id}')">
+                <img src="${foto}" class="img-cardapio">
+                <div class="info-cardapio">
+                    <span class="tag-categoria-cliente">${p.categoria || 'Geral'}</span>
+                    <h3>${p.nome}</h3>
+                    <div class="estoque-badge">
+                        <i class="fas fa-boxes"></i> Disponível hoje: 
+                        <strong style="color: ${disponivelAgora > 0 ? '#27ae60' : '#e74c3c'}">
+                            ${disponivelAgora}
+                        </strong>
                     </div>
-                </div>`;
-        });
+                    <span class="preco-btn">Ver Disponibilidade</span>
+                </div>
+            </div>`;
     });
 }
+
+// 2. ADICIONE ISSO LOGO ABAIXO DA FUNÇÃO (FORA DELA)
+// Este é o "Gatilho Mestre": ele vigia os agendamentos e recarrega a vitrine se algo mudar
+database.ref('agendamentos').on('value', () => {
+    console.log("Sistema: Atualizando vitrine devido a mudança nos agendamentos...");
+    carregarCardapio();
+});
 
 /**
  * 4. CONTROLE DO MODAL E CALENDÁRIO
  */
-function abrirAgenda(idProduto) {
+async function abrirAgenda(idProduto) { // Adicionado 'async' aqui
     // 1. Busca os dados primeiro
-    database.ref('produtos/' + idProduto).once('value', snap => {
+    database.ref('produtos/' + idProduto).once('value', async snap => { // Adicionado 'async' no callback
         const dados = snap.val();
         if (!dados) return;
 
         produtoSelecionado = { id: idProduto, ...dados };
         document.getElementById('nome-produto-modal').innerText = produtoSelecionado.nome;
 
-        // 2. MOSTRA O MODAL PRIMEIRO (Crucial)
+        // 2. MOSTRA O MODAL PRIMEIRO
         const modal = document.getElementById('modal-calendario');
         modal.style.setProperty('display', 'block', 'important');
 
+        // Define a data de hoje para a consulta inicial
+        const dataDeHoje = new Date().toISOString().split('T')[0];
+
+        // Agora o await vai funcionar porque a função é async
+        const estoqueRestante = await verificarEstoqueDisponivel(idProduto, dataDeHoje, dataDeHoje);
+        
+        const infoEstoque = document.getElementById('info-estoque-modal');
+        if(infoEstoque) {
+            infoEstoque.innerHTML = `Disponibilidade atual: <strong style="color: ${estoqueRestante > 0 ? 'green' : 'red'}">${estoqueRestante} unidade(s)</strong>`;
+        }
+
         // 3. AGUARDA O NAVEGADOR RENDERIZAR O MODAL
-        // Usamos um delay um pouco maior para garantir no 4G/Mobile
         setTimeout(() => {
             renderizarCalendario(idProduto);
         }, 150);
@@ -148,16 +190,23 @@ function renderizarCalendario(idProduto) {
 /**
  * 5. SOLICITAÇÃO (FIREBASE + WHATSAPP)
  */
-function solicitarReserva() {
+async function solicitarReserva() {
     const ini = document.getElementById('reserva-ini').value;
     const fim = document.getElementById('reserva-fim').value;
     const nome = document.getElementById('cliente-nome').value;
-    const fone = document.getElementById('cliente-fone').value.replace(/\D/g, ""); // Remove letras/espaços
+    const fone = document.getElementById('cliente-fone').value.replace(/\D/g, "");
     const endereco = document.getElementById('cliente-endereco').value;
 
-    // Validação simples
     if(!ini || !fim) return alert("Selecione as datas no calendário!");
-    if(!nome || !fone || !endereco) return alert("Por favor, preencha todos os campos para contato.");
+    if(!nome || !fone || !endereco) return alert("Por favor, preencha todos os campos.");
+
+    // Verifica estoque antes de prosseguir
+    const disponivel = await verificarEstoqueDisponivel(produtoSelecionado.id, ini, fim);
+
+    if (disponivel <= 0) {
+        alert("Desculpe! Este brinquedo já está totalmente reservado para este período.");
+        return;
+    }
 
     const dadosReserva = {
         produto_id: produtoSelecionado.id,
@@ -166,30 +215,32 @@ function solicitarReserva() {
         data_inicio: ini,
         data_fim: fim,
         cliente_nome: nome,
-        cliente_fone: fone, // Usaremos isso para a consulta do cliente
+        cliente_fone: fone,
         cliente_endereco: endereco,
         status: "pendente",
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        estoque_na_reserva: disponivel
     };
 
-    // Salva no Firebase
     database.ref('solicitacoes').push(dadosReserva).then(() => {
-        alert("Solicitação enviada com sucesso! Você pode acompanhar o status na aba 'Minhas Solicitações'.");
-        
-        // Limpa os campos
-        document.getElementById('cliente-nome').value = "";
-        document.getElementById('cliente-fone').value = "";
-        document.getElementById('cliente-endereco').value = "";
+        const msg = `Olá! Acabei de fazer uma *solicitação de reserva* pelo portal:%0A%0A` +
+                    `*Produto:* ${produtoSelecionado.nome}%0A` +
+                    `*Período:* ${ini.split('-').reverse().join('/')} até ${fim.split('-').reverse().join('/')}%0A` +
+                    `*Cliente:* ${nome}%0A` +
+                    `*Endereço:* ${endereco}`;
+
+        const foneFornecedor = (produtoSelecionado.whatsapp_dono || "5531999999999").replace(/\D/g, "");
+        const linkWhats = `https://wa.me/${foneFornecedor}?text=${msg}`;
+
+        window.open(linkWhats, '_blank');
+        alert("Solicitação enviada com sucesso!");
         
         fecharModalCalendario();
-        
-        // Opcional: Ainda podemos abrir o Whats se você quiser, mas agora os dados já estão no banco!
     }).catch(error => {
         console.error("Erro ao salvar:", error);
         alert("Erro ao enviar solicitação.");
     });
 }
-
 /**
  * 6. FUNÇÕES AUXILIARES
  */
@@ -211,7 +262,7 @@ window.onclick = function(event) {
 };
 
 /**
- * 7. CONSULTAR PEDIDOS (Atualizado com status Finalizada)
+ * 7. CONSULTAR PEDIDOS (Atualizado para incluir status Agendado)
  */
 function consultarPedidosCliente() {
     const whatsConsulta = document.getElementById('cliente-whatsapp-consulta').value.replace(/\D/g, "");
@@ -231,30 +282,32 @@ function consultarPedidosCliente() {
         }
 
         Object.values(pedidos).reverse().forEach(p => {
-            // 1. Definição Dinâmica de Status e Cores
             let statusClass = '';
             let statusTexto = '';
             let larguraProgresso = '0%';
 
+            // --- LÓGICA DE STATUS ATUALIZADA ---
             switch (p.status) {
                 case 'pendente':
                     statusClass = 'status-pendente';
                     statusTexto = 'Aguardando Fornecedor';
                     larguraProgresso = '33%';
                     break;
+                case 'agendado': // Novo caso para o status "agendado"
                 case 'confirmado':
-                    statusClass = 'status-confirmado';
-                    statusTexto = 'Reserva Confirmada';
-                    larguraProgresso = '66%';
+                    statusClass = 'status-confirmado'; // Usa o verde do confirmado
+                    statusTexto = 'Reserva Agendada';
+                    larguraProgresso = '75%'; // Barra bem mais cheia
                     break;
                 case 'finalizada':
-                    statusClass = 'status-finalizada'; // Criar esta classe no CSS do cliente
+                    statusClass = 'status-finalizada';
                     statusTexto = 'Locação Concluída';
                     larguraProgresso = '100%';
                     break;
                 default:
                     statusClass = 'status-pendente';
                     statusTexto = p.status;
+                    larguraProgresso = '10%';
             }
 
             containerHistorico.innerHTML += `
@@ -269,7 +322,7 @@ function consultarPedidosCliente() {
                     </div>
                     
                     <div class="barra-progresso">
-                        <div class="progresso-preenchido" style="width: ${larguraProgresso}; background-color: ${p.status === 'finalizada' ? 'var(--success-green)' : ''}"></div>
+                        <div class="progresso-preenchido" style="width: ${larguraProgresso}; background-color: ${(p.status === 'finalizada' || p.status === 'agendado') ? 'var(--success-green)' : ''}"></div>
                     </div>
                     
                     ${p.status === 'finalizada' ? '<p style="font-size: 0.75rem; color: var(--success-green); margin-top: 8px; text-align: center; font-weight: bold;">✓ Equipamento devolvido e locação finalizada</p>' : ''}
@@ -278,7 +331,6 @@ function consultarPedidosCliente() {
         });
     });
 }
-
 // Adicione isso ao seu arquivo JS para garantir que o clique funcione no mobile
 document.querySelectorAll('input[type="date"]').forEach(input => {
     input.addEventListener('click', function() {
@@ -287,3 +339,31 @@ document.querySelectorAll('input[type="date"]').forEach(input => {
         }
     });
 });
+
+/**
+ * 8. CONSULTAR ESTOQUE(Atualizado com status Finalizada)
+ */
+async function verificarEstoqueDisponivel(idProduto, dataInicio, dataFim) {
+    const snapProd = await database.ref('produtos/' + idProduto).once('value');
+    const produto = snapProd.val();
+    const estoqueTotal = parseInt(produto.estoque_total) || 1;
+
+    const snapAgend = await database.ref('agendamentos').once('value');
+    const agendamentos = snapAgend.val() || {};
+
+    let ocupados = 0;
+
+    Object.values(agendamentos).forEach(res => {
+        // --- A MUDANÇA ESTÁ AQUI ---
+        // Só contamos como 'ocupado' se o produto for o mesmo E o status NÃO for finalizado
+        if (res.produto_id === idProduto && res.status !== 'finalizada') {
+            
+            // Verifica se as datas coincidem
+            if (dataInicio <= res.data_fim && dataFim >= res.data_inicio) {
+                ocupados++;
+            }
+        }
+    });
+
+    return estoqueTotal - ocupados;
+}
