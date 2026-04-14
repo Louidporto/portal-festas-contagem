@@ -152,76 +152,99 @@ async function abrirAgenda(idProduto) {
     });
 }
 
+let dataPrimeiroClique = null; // Variável para controlar os cliques
+
 function renderizarCalendario(idProduto) {
     const calendarEl = document.getElementById('calendario-view');
-    
-    // Limpa o conteúdo anterior para não duplicar no mobile
     calendarEl.innerHTML = "";
+    dataPrimeiroClique = null; // Reseta sempre que abrir o calendário
 
     database.ref('agendamentos').once('value', snapshot => {
         const agendamentos = snapshot.val() || {};
         const eventosOcupados = [];
 
         Object.values(agendamentos).forEach(res => {
-            if (res.produto_id === idProduto) {
+            if (res.produto_id === idProduto && res.status !== 'finalizada') {
                 eventosOcupados.push({
                     start: res.data_inicio,
                     end: ajustarDataFimFullCalendar(res.data_fim),
                     display: 'background',
-                    color: '#ff4d4d' // Vermelho para ocupado
+                    color: '#ff4d4d'
                 });
             }
         });
 
-        // Destrói instância antiga se existir
-        if (calendarioInstancia) {
-            calendarioInstancia.destroy();
-        }
+        if (calendarioInstancia) { calendarioInstancia.destroy(); }
 
-            calendarioInstancia = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                locale: 'pt-br',
-                selectable: true,
-                longPressDelay: 0,
-                
-                // --- AJUSTES DE TAMANHO ---
-                aspectRatio: 1.35,      /* Aumentar esse número achata o calendário */
-                contentHeight: 'auto',  /* Faz o calendário se ajustar ao tamanho das células */
-                // --------------------------
-            
-                headerToolbar: { 
-                    left: 'prev,next', 
-                    center: 'title', 
-                    right: '' 
-                },
-                events: eventosOcupados,
-            // Dentro da configuração do FullCalendar em renderizarCalendario:
-                select: function(info) {
-                    const inputIni = document.getElementById('reserva-ini');
-                    const inputFim = document.getElementById('reserva-fim');
+        calendarioInstancia = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'pt-br',
+            selectable: true,
+            unselectAuto: false, // Impede que a seleção suma ao clicar fora
+            headerToolbar: { left: 'prev,next', center: 'title', right: '' },
+            events: eventosOcupados,
+            aspectRatio: 1.35,
+            contentHeight: 'auto',
 
-                    inputIni.value = info.startStr;
+            // LÓGICA DE DOIS CLIQUES
+            dateClick: function(info) {
+                const inputIni = document.getElementById('reserva-ini');
+                const inputFim = document.getElementById('reserva-fim');
+
+                if (!dataPrimeiroClique) {
+                    // PRIMEIRO CLIQUE: Define o início
+                    dataPrimeiroClique = info.dateStr;
+                    inputIni.value = info.dateStr;
+                    inputFim.value = ""; // Limpa o fim enquanto espera o segundo clique
                     
-                    let dFim = new Date(info.end);
-                    dFim.setDate(dFim.getDate() - 1);
-                    const dataFimFormatada = dFim.toISOString().split('T')[0];
-                    inputFim.value = dataFimFormatada;
+                    // Visual: Seleciona visualmente apenas o primeiro dia
+                    calendarioInstancia.select(info.dateStr);
+                } else {
+                    // SEGUNDO CLIQUE: Define o fim
+                    let dataSegunda = info.dateStr;
 
-                    // GATILHO: Dispara o cálculo de estoque assim que seleciona no calendário
-                    calcularEstoqueDisponivel(produtoSelecionado.id, info.startStr, dataFimFormatada);
+                    // Validação: Se clicar em uma data anterior à primeira, inverte as datas
+                    let d1 = dataPrimeiroClique;
+                    let d2 = dataSegunda;
+                    if (d2 < d1) { [d1, d2] = [d2, d1]; }
+
+                    inputIni.value = d1;
+                    inputFim.value = d2;
+
+                    // Aplica a seleção visual no calendário
+                    // No FullCalendar, o select(start, end) é exclusivo no fim, então somamos 1 dia para colorir a célula do dia final
+                    let dFimVisual = new Date(d2);
+                    dFimVisual.setDate(dFimVisual.getDate() + 1);
+                    calendarioInstancia.select(d1, dFimVisual.toISOString().split('T')[0]);
+
+                    // Dispara o cálculo de estoque
+                    calcularEstoqueDisponivel(idProduto, d1, d2);
+
+                    // Reseta para permitir uma nova seleção de dois cliques se ele mudar de ideia
+                    dataPrimeiroClique = null;
                 }
-            
+            },
+
+            // Mantemos o 'select' para caso ele ainda prefira arrastar (funciona dos dois jeitos agora)
+            select: function(info) {
+                const inputIni = document.getElementById('reserva-ini');
+                const inputFim = document.getElementById('reserva-fim');
+
+                inputIni.value = info.startStr;
+                let dFim = new Date(info.end);
+                dFim.setDate(dFim.getDate() - 1);
+                const dataFimFormatada = dFim.toISOString().split('T')[0];
+                inputFim.value = dataFimFormatada;
+
+                calcularEstoqueDisponivel(idProduto, info.startStr, dataFimFormatada);
+                dataPrimeiroClique = null; // Reseta se ele arrastar
+            }
         });
 
         calendarioInstancia.render();
-        
-        // Comando mestre para consertar o layout no mobile
-        setTimeout(() => {
-            calendarioInstancia.updateSize();
-        }, 100);
+        setTimeout(() => { calendarioInstancia.updateSize(); }, 100);
     });
 }
-
 /**
  * 5. SOLICITAÇÃO (FIREBASE + WHATSAPP)
  */
