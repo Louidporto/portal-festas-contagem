@@ -1,447 +1,369 @@
-/* --- CONFIGURAÇÕES GERAIS --- */
-:root {
-    --primary-blue: #0056b3;
-    --success-green: #2ecc71;
-    --danger-red: #e74c3c;
-    --gray-neutral: #7f8c8d;
-    --bg-light: #f4f7f6;
-    --white: #ffffff;
+// --- VARIÁVEIS GLOBAIS ---
+let produtoSelecionado = null;
+let calendarioInstancia = null;
+
+/**
+ * 1. INICIALIZAÇÃO
+ */
+window.onload = function() {
+    console.log("Portal iniciado...");
+    carregarCardapio();
+};
+
+/**
+ * 2. NAVEGAÇÃO DO PORTAL (Alternar Abas)
+ */
+function alternarSecao(secaoAlvo) {
+    const secaoCatalogo = document.getElementById('secao-catalogo');
+    const secaoSolicitacoes = document.getElementById('secao-solicitacoes');
+    const btnCat = document.getElementById('btn-catalogo');
+    const btnSol = document.getElementById('btn-solicitacoes');
+
+    if (secaoAlvo === 'catalogo') {
+        secaoCatalogo.style.display = 'block';
+        secaoSolicitacoes.style.display = 'none';
+        btnCat.classList.add('active');
+        btnSol.classList.remove('active');
+    } else {
+        secaoCatalogo.style.display = 'none';
+        secaoSolicitacoes.style.display = 'block';
+        btnCat.classList.remove('active');
+        btnSol.classList.add('active');
+    }
 }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Poppins', sans-serif;
-}
-
-body {
-    background-color: var(--bg-light);
-    color: #333;
-    line-height: 1.6;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-/* --- HEADER DE MARKETING --- */
-.main-header {
-    background: linear-gradient(135deg, var(--primary-blue), #003d80);
-    color: white;
-    padding: 10px 15px;
-    text-align: center;
-    border-radius: 0 0 50px 50px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+/**
+ * 3. CARREGAR CATÁLOGO (VITRINE)
+ */
+// 1. Modifique sua função carregarCardapio para usar .once
+async function carregarCardapio() {
+    const lista = document.getElementById('lista-brinquedos');
+    const filtro = document.getElementById('filtro-categoria').value;
     
+    if (!lista) return;
+
+    // Mudamos para .once('value') para que o gatilho externo controle a atualização
+    const snapshot = await database.ref('produtos').once('value');
+    const produtos = snapshot.val();
+    
+    if (!produtos) {
+        lista.innerHTML = "<p>Nenhum produto cadastrado.</p>";
+        return;
+    }
+
+    const dataHoje = new Date().toISOString().split('T')[0];
+    const IDs = Object.keys(produtos);
+
+    const promessas = IDs.map(id => verificarEstoqueDisponivel(id, dataHoje, dataHoje));
+    const estoquesDisponiveis = await Promise.all(promessas);
+
+    lista.innerHTML = ""; 
+
+    IDs.forEach((id, index) => {
+        const p = produtos[id];
+        
+        if (p.status !== "ativo") return;
+        if (filtro !== "todos" && p.categoria !== filtro) return;
+
+        const disponivelAgora = estoquesDisponiveis[index];
+        const foto = p.imagem ? p.imagem.split(',')[0] : 'https://via.placeholder.com/300x200';
+        
+        lista.innerHTML += `
+            <div class="card-item-cardapio" onclick="abrirAgenda('${id}')">
+                <img src="${foto}" class="img-cardapio">
+                <div class="info-cardapio">
+                    <span class="tag-categoria-cliente">${p.categoria || 'Geral'}</span>
+                    <h3>${p.nome}</h3>
+                    <div class="estoque-badge">
+                        <i class="fas fa-boxes"></i> Disponível hoje: 
+                        <strong style="color: ${disponivelAgora > 0 ? '#27ae60' : '#e74c3c'}">
+                            ${disponivelAgora}
+                        </strong>
+                    </div>
+                    <span class="preco-btn">Ver Disponibilidade</span>
+                </div>
+            </div>`;
+    });
 }
 
-h1 {
-    display: block;
-    font-size: 2em;
-    margin-block-start: 0.67em;
-    margin-block-end: 0.67em;
-    margin-inline-start: 0px;
-    margin-inline-end: 0px;
-    font-weight: bold;
-    unicode-bidi: isolate;
+// 2. ADICIONE ISSO LOGO ABAIXO DA FUNÇÃO (FORA DELA)
+// Este é o "Gatilho Mestre": ele vigia os agendamentos e recarrega a vitrine se algo mudar
+database.ref('agendamentos').on('value', () => {
+    console.log("Sistema: Atualizando vitrine devido a mudança nos agendamentos...");
+    carregarCardapio();
+});
+
+/**
+ * 4. CONTROLE DO MODAL E CALENDÁRIO
+ */
+async function abrirAgenda(idProduto) { // Adicionado 'async' aqui
+    // 1. Busca os dados primeiro
+    database.ref('produtos/' + idProduto).once('value', async snap => { // Adicionado 'async' no callback
+        const dados = snap.val();
+        if (!dados) return;
+
+        produtoSelecionado = { id: idProduto, ...dados };
+        document.getElementById('nome-produto-modal').innerText = produtoSelecionado.nome;
+
+        // 2. MOSTRA O MODAL PRIMEIRO
+        const modal = document.getElementById('modal-calendario');
+        modal.style.setProperty('display', 'block', 'important');
+
+        // Define a data de hoje para a consulta inicial
+        const dataDeHoje = new Date().toISOString().split('T')[0];
+
+        // Agora o await vai funcionar porque a função é async
+        const estoqueRestante = await verificarEstoqueDisponivel(idProduto, dataDeHoje, dataDeHoje);
+        
+        const infoEstoque = document.getElementById('info-estoque-modal');
+        if(infoEstoque) {
+            infoEstoque.innerHTML = `Disponibilidade atual: <strong style="color: ${estoqueRestante > 0 ? 'green' : 'red'}">${estoqueRestante} unidade(s)</strong>`;
+        }
+
+        // 3. AGUARDA O NAVEGADOR RENDERIZAR O MODAL
+        setTimeout(() => {
+            renderizarCalendario(idProduto);
+        }, 150);
+    });
 }
 
-.logo-container i { font-size: 3.5rem; margin-bottom: 15px; display: block; }
-.logo-container h1 { font-size: 2.5rem; letter-spacing: -1px; }
+function renderizarCalendario(idProduto) {
+    const calendarEl = document.getElementById('calendario-view');
+    
+    // Limpa o conteúdo anterior para não duplicar no mobile
+    calendarEl.innerHTML = "";
 
-/* --- GALERIA DE MARKETING (EM LINHA) --- */
-.marketing-gallery {
-    width: 100%;
-    overflow-x: auto;
-    padding: 30px 0;
-    -webkit-overflow-scrolling: touch;
-}
+    database.ref('agendamentos').once('value', snapshot => {
+        const agendamentos = snapshot.val() || {};
+        const eventosOcupados = [];
 
-.gallery-track {
-    display: flex;
-    gap: 20px;
-    padding: 0 40px;
-    width: max-content;
-}
+        Object.values(agendamentos).forEach(res => {
+            if (res.produto_id === idProduto) {
+                eventosOcupados.push({
+                    start: res.data_inicio,
+                    end: ajustarDataFimFullCalendar(res.data_fim),
+                    display: 'background',
+                    color: '#ff4d4d' // Vermelho para ocupado
+                });
+            }
+        });
 
-.gallery-item {
-    flex: 0 0 auto;
-    width: 300px;
-    height: 200px;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    transition: transform 0.3s;
-}
+        // Destrói instância antiga se existir
+        if (calendarioInstancia) {
+            calendarioInstancia.destroy();
+        }
 
-.gallery-item:hover { transform: scale(1.03); }
+            calendarioInstancia = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'pt-br',
+                selectable: true,
+                longPressDelay: 0,
+                
+                // --- AJUSTES DE TAMANHO ---
+                aspectRatio: 1.35,      /* Aumentar esse número achata o calendário */
+                contentHeight: 'auto',  /* Faz o calendário se ajustar ao tamanho das células */
+                // --------------------------
+            
+                headerToolbar: { 
+                    left: 'prev,next', 
+                    center: 'title', 
+                    right: '' 
+                },
+                events: eventosOcupados,
+            select: function(info) {
+                document.getElementById('reserva-ini').value = info.startStr;
+                let dFim = new Date(info.end);
+                dFim.setDate(dFim.getDate() - 1);
+                document.getElementById('reserva-fim').value = dFim.toISOString().split('T')[0];
+            }
+        });
 
-.gallery-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* --- MENU DO PORTAL (BOTÕES) --- */
-.portal-menu {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-bottom: 30px;
-}
-
-.nav-btn {
-    padding: 14px 30px;
-    border: none;
-    border-radius: 30px;
-    background: #ddd;
-    color: #666;
-    font-weight: 600;
-    cursor: pointer;
-    transition: 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.nav-btn.active {
-    background: var(--primary-blue);
-    color: white;
-    box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
+        calendarioInstancia.render();
+        
+        // Comando mestre para consertar o layout no mobile
+        setTimeout(() => {
+            calendarioInstancia.updateSize();
+        }, 100);
+    });
 }
 
-/* --- GRID DO CATÁLOGO --- */
-.grid-layout {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 25px;
+/**
+ * 5. SOLICITAÇÃO (FIREBASE + WHATSAPP)
+ */
+async function solicitarReserva() {
+    const ini = document.getElementById('reserva-ini').value;
+    const fim = document.getElementById('reserva-fim').value;
+    const nome = document.getElementById('cliente-nome').value;
+    const fone = document.getElementById('cliente-fone').value.replace(/\D/g, "");
+    const endereco = document.getElementById('cliente-endereco').value;
+
+    if(!ini || !fim) return alert("Selecione as datas no calendário!");
+    if(!nome || !fone || !endereco) return alert("Por favor, preencha todos os campos.");
+
+    // Verifica estoque antes de prosseguir
+    const disponivel = await verificarEstoqueDisponivel(produtoSelecionado.id, ini, fim);
+
+    if (disponivel <= 0) {
+        alert("Desculpe! Este brinquedo já está totalmente reservado para este período.");
+        return;
+    }
+
+    const dadosReserva = {
+        produto_id: produtoSelecionado.id,
+        nome_produto: produtoSelecionado.nome,
+        valor_produto: produtoSelecionado.valor,
+        data_inicio: ini,
+        data_fim: fim,
+        cliente_nome: nome,
+        cliente_fone: fone,
+        cliente_endereco: endereco,
+        status: "pendente",
+        timestamp: Date.now(),
+        estoque_na_reserva: disponivel
+    };
+
+    database.ref('solicitacoes').push(dadosReserva).then(() => {
+        const msg = `Olá! Acabei de fazer uma *solicitação de reserva* pelo portal:%0A%0A` +
+                    `*Produto:* ${produtoSelecionado.nome}%0A` +
+                    `*Período:* ${ini.split('-').reverse().join('/')} até ${fim.split('-').reverse().join('/')}%0A` +
+                    `*Cliente:* ${nome}%0A` +
+                    `*Endereço:* ${endereco}`;
+
+        const foneFornecedor = (produtoSelecionado.whatsapp_dono || "5531999999999").replace(/\D/g, "");
+        const linkWhats = `https://wa.me/${foneFornecedor}?text=${msg}`;
+
+        window.open(linkWhats, '_blank');
+        alert("Solicitação enviada com sucesso!");
+        
+        fecharModalCalendario();
+    }).catch(error => {
+        console.error("Erro ao salvar:", error);
+        alert("Erro ao enviar solicitação.");
+    });
+}
+/**
+ * 6. FUNÇÕES AUXILIARES
+ */
+function fecharModalCalendario() {
+    document.getElementById('modal-calendario').style.display = 'none';
 }
 
-.card-item-cardapio {
-    background: white;
-    border-radius: 20px;
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: 0.3s;
+function ajustarDataFimFullCalendar(dataString) {
+    if (!dataString) return null;
+    let d = new Date(dataString);
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
 }
 
-.tag-categoria-cliente {
-    background: #e3f2fd;
-    color: #1976d2;
-    font-size: 0.7rem;
-    font-weight: bold;
-    padding: 2px 8px;
-    border-radius: 10px;
-    text-transform: uppercase;
-}
+// Fechar modal ao clicar fora
+window.onclick = function(event) {
+    const modal = document.getElementById('modal-calendario');
+    if (event.target == modal) fecharModalCalendario();
+};
 
-.estoque-badge {
-    font-size: 0.85rem;
-    color: #555;
-    margin: 8px 0;
-}
+/**
+ * 7. CONSULTAR PEDIDOS (Atualizado para incluir status Agendado)
+ */
+function consultarPedidosCliente() {
+    const whatsConsulta = document.getElementById('cliente-whatsapp-consulta').value.replace(/\D/g, "");
+    const containerHistorico = document.getElementById('historico-pedidos');
 
-.filtro-container {
-    padding: 15px;
-    text-align: center;
-    background: #f8f9fa;
-    margin-bottom: 20px;
-    border-bottom: 1px solid #ddd;
-}
+    if (!whatsConsulta) return alert("Digite o número do seu WhatsApp cadastrado.");
 
-#filtro-categoria {
-    padding: 8px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    outline: none;
-}
+    containerHistorico.innerHTML = "<p>Buscando suas solicitações...</p>";
 
-.card-item-cardapio:hover { transform: translateY(-5px); }
+    database.ref('solicitacoes').orderByChild('cliente_fone').equalTo(whatsConsulta).once('value', snapshot => {
+        containerHistorico.innerHTML = "";
+        const pedidos = snapshot.val();
 
-.img-cardapio { width: 100%; height: 180px; object-fit: cover; }
+        if (!pedidos) {
+            containerHistorico.innerHTML = "<p class='aviso'>Nenhuma solicitação encontrada para este número.</p>";
+            return;
+        }
 
-.info-cardapio { padding: 20px; }
-.info-cardapio h3 { margin-bottom: 10px; color: var(--primary-blue); }
+        Object.values(pedidos).reverse().forEach(p => {
+            let statusClass = '';
+            let statusTexto = '';
+            let larguraProgresso = '0%';
 
-.preco-btn {
-    display: block;
-    margin-top: 15px;
-    background: var(--success-green);
-    color: white;
-    text-align: center;
-    padding: 10px;
-    border-radius: 10px;
-    font-weight: bold;
-}
+            // --- LÓGICA DE STATUS ATUALIZADA ---
+            switch (p.status) {
+                case 'pendente':
+                    statusClass = 'status-pendente';
+                    statusTexto = 'Aguardando Fornecedor';
+                    larguraProgresso = '33%';
+                    break;
+                case 'agendado': // Novo caso para o status "agendado"
+                case 'confirmado':
+                    statusClass = 'status-confirmado'; // Usa o verde do confirmado
+                    statusTexto = 'Reserva Agendada';
+                    larguraProgresso = '75%'; // Barra bem mais cheia
+                    break;
+                case 'finalizada':
+                    statusClass = 'status-finalizada';
+                    statusTexto = 'Locação Concluída';
+                    larguraProgresso = '100%';
+                    break;
+                default:
+                    statusClass = 'status-pendente';
+                    statusTexto = p.status;
+                    larguraProgresso = '10%';
+            }
 
-/* --- ABA DE SOLICITAÇÕES (BUSCA) --- */
-.search-box {
-    background: white;
-    padding: 40px;
-    border-radius: 25px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    max-width: 600px;
-    margin: 20px auto;
-    gap: 20px;
+            containerHistorico.innerHTML += `
+                <div class="card-pedido-cliente" style="${p.status === 'finalizada' ? 'opacity: 0.85;' : ''}">
+                    <div class="pedido-header">
+                        <strong>${p.nome_produto}</strong>
+                        <span class="status-badge ${statusClass}">${statusTexto}</span>
+                    </div>
+                    <div class="pedido-detalhes">
+                        <p><i class="far fa-calendar-alt"></i> ${p.data_inicio.split('-').reverse().join('/')} até ${p.data_fim.split('-').reverse().join('/')}</p>
+                        <p><i class="fas fa-map-marker-alt"></i> ${p.cliente_endereco}</p>
+                    </div>
+                    
+                    <div class="barra-progresso">
+                        <div class="progresso-preenchido" style="width: ${larguraProgresso}; background-color: ${(p.status === 'finalizada' || p.status === 'agendado') ? 'var(--success-green)' : ''}"></div>
+                    </div>
+                    
+                    ${p.status === 'finalizada' ? '<p style="font-size: 0.75rem; color: var(--success-green); margin-top: 8px; text-align: center; font-weight: bold;">✓ Equipamento devolvido e locação finalizada</p>' : ''}
+                </div>
+            `;
+        });
+    });
 }
+// Adicione isso ao seu arquivo JS para garantir que o clique funcione no mobile
+document.querySelectorAll('input[type="date"]').forEach(input => {
+    input.addEventListener('click', function() {
+        if (typeof this.showPicker === 'function') {
+            this.showPicker(); // Força a abertura do seletor nativo do celular
+        }
+    });
+});
 
-.input-group {
-    display: flex; 
-    flex-direction: column; /* Alinha os itens um abaixo do outro */
-    margin-top: 20px;
-}
+/**
+ * 8. CONSULTAR ESTOQUE(Atualizado com status Finalizada)
+ */
+async function verificarEstoqueDisponivel(idProduto, dataInicio, dataFim) {
+    const snapProd = await database.ref('produtos/' + idProduto).once('value');
+    const produto = snapProd.val();
+    const estoqueTotal = parseInt(produto.estoque_total) || 1;
 
-.input-group input {
-    flex: 1;
-    padding: 15px;
-    border: 2px solid #eee;
-    border-radius: 12px;
-    outline: none;
-}
-#cliente-whatsapp-consulta {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 1rem;
-}
+    const snapAgend = await database.ref('agendamentos').once('value');
+    const agendamentos = snapAgend.val() || {};
 
-.btn-buscar {
-    width: 100%;            /* Botão ocupa a largura total para facilitar o toque */
-    background-color: var(--primary-blue);
-    color: white;
-    border: none;
-    padding: 14px;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.3s;
-}
-.btn-buscar:active {
-    background-color: #004494; /* Feedback de clique no mobile */
-    transform: scale(0.98);
-}
-.card-pedido-cliente {
-    background: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin-top: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    border-left: 5px solid var(--primary-blue);
-}
+    let ocupados = 0;
 
-.pedido-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-}
+    Object.values(agendamentos).forEach(res => {
+        // --- A MUDANÇA ESTÁ AQUI ---
+        // Só contamos como 'ocupado' se o produto for o mesmo E o status NÃO for finalizado
+        if (res.produto_id === idProduto && res.status !== 'finalizada') {
+            
+            // Verifica se as datas coincidem
+            if (dataInicio <= res.data_fim && dataFim >= res.data_inicio) {
+                ocupados++;
+            }
+        }
+    });
 
-.status-badge {
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: bold;
-}
-
-.status-pendente { background: #ffeaa7; color: #d6a01d; }
-.status-confirmado { background: var(--success-green);; color: darkgreen; }
-/* Adicione isso junto com os outros status-badge */
-.status-agendado { 
-    background: #d4edda; 
-    color: #155724; 
-    border: 1px solid #c3e6cb;
-}
-
-.barra-progresso {
-    background: #eee;
-    height: 8px;
-    border-radius: 10px;
-    margin-top: 15px;
-    overflow: hidden;
-}
-
-.progresso-preenchido {
-    height: 100%;
-    background: var(--success-green);
-    transition: width 0.5s ease;
-}
-
-.dados-cliente-form input {
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 0.9rem;
-}
-
-/* Status Finalizado para o Cliente */
-.status-finalizada {
-    background-color: #ebedef; /* Cinza claro */
-    color: #7f8c8d;
-    border: 1px solid #bdc3c7;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 0.8em;
-    font-weight: bold;
-}
-
-/* --- CALENDÁRIO & MODAL --- */
-/* Garante que o fundo escuro cubra TUDO */
-#modal-calendario {
-    display: none; 
-    position: fixed !important; /* Força a posição fixa */
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.85) !important;
-    z-index: 99999 !important; /* Camada máxima */
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch; /* Suaviza scroll no iPhone */
-}
-/* Garante que o conteúdo do calendário apareça */
-.modal-content {
-    background: #fff;
-    margin: 20px auto;
-    width: 95%;
-    max-width: 500px;
-    border-radius: 12px;
-    padding: 15px;
-    position: relative;
-    z-index: 100000 !important;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-/* Ajuste para o FullCalendar não sumir no branco */
-#calendario-view {
-    max-width: 90%;      /* Não gruda nas bordas do modal */
-    margin: 0 auto;       /* Centraliza */
-    font-size: 0.85em;    /* Diminui a fonte geral (números e dias) */
-}
-
-.close {
-    position: absolute;
-    right: 25px;
-    top: 20px;
-    font-size: 30px;
-    cursor: pointer;
-}
-
-/* Ajuste para inputs de data no mobile */
-input[type="date"] {
-    appearance: none;
-    -webkit-appearance: none;
-    min-height: 45px; /* Altura boa para o toque do dedo */
-    background-color: #fff;
-    font-family: inherit;
-    font-size: 1rem;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    width: 100%; /* Garante que não "vaze" do card */
-    display: block;
-    position: relative;
-}
-
-/* Garante que o ícone do calendário não quebre o layout */
-input[type="date"]::-webkit-calendar-picker-indicator {
-    cursor: pointer;
-    padding: 5px;
-}
-#calendario-view {
-    height: 320px; /* Força uma altura fixa compacta */
-    overflow: hidden; /* Evita scrolls internos chatos */
-}
-
-/* CORES FORTES NO CALENDÁRIO */
-/* Ajusta o tamanho das células do FullCalendar para dedos */
-.fc-daygrid-day-number {
-    font-size: 1.1em;
-    padding: 8px !important;
-}
-
-/* Ajustar a altura das células para o calendário ficar mais "achatado" */
-.fc .fc-daygrid-day {
-    height: 45px !important; /* Altura menor para as células */
-}
-
-/* Diminuir o cabeçalho (Título e botões Próximo/Anterior) */
-.fc .fc-toolbar {
-    margin-bottom: 5px !important;
-    padding: 5px !important;
-}
-.fc .fc-toolbar-title {
-    font-size: 1.1em !important;
-}
-
-.fc-bg-event { 
-    opacity: 1 !important; 
-    background-color: var(--gray-neutral) !important; /* Cinza ocupado */
-}
-
-.fc-highlight {
-    background-color: #3498db !important; /* Azul seleção */
-    opacity: 0.8 !important;
-}
-.fc .fc-button {
-    padding: 4px 8px !important; /* Botões menores */
-    font-size: 0.8em !important;
-}
-
-.btn-solicitar {
-    width: 100%;
-    background: #25d366;
-    color: white;
-    border: none;
-    padding: 18px;
-    border-radius: 15px;
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 20px;
-}
-/* FORMATAÇÃO DO PERÍODO (INPUTS DE DATA) */
-.inputs-reserva {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 15px;
-    background: #f8f9fa; /* Fundo leve para destacar o grupo */
-    padding: 10px;
-    border-radius: 12px;
-}
-
-.inputs-reserva input[type="date"] {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px; /* Cantos arredondados como o campo de nome */
-    font-family: 'Poppins', sans-serif;
-    color: #333;
-    background-color: white;
-    outline: none;
-    cursor: default; /* Como é readonly, removemos o ponteiro de texto */
-    width: 140px;
-    text-align: center;
-}
-
-.inputs-reserva span {
-    font-weight: 600;
-    color: #666;
-    font-size: 0.9rem;
-    text-transform: lowercase;
-}
-
-/* ANIMAÇÃO DE TROCA DE ABA */
-.content-section {
-    animation: fadeIn 0.4s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    return estoqueTotal - ocupados;
 }
