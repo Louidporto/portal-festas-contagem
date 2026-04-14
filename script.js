@@ -152,12 +152,13 @@ async function abrirAgenda(idProduto) {
     });
 }
 
-let dataPrimeiroClique = null; // Variável para controlar os cliques
+// 1. Mantenha esta variável FORA da função para ela não resetar sozinha
+let dataPrimeiroClique = null; 
 
 function renderizarCalendario(idProduto) {
     const calendarEl = document.getElementById('calendario-view');
     calendarEl.innerHTML = "";
-    dataPrimeiroClique = null; // Reseta sempre que abrir o calendário
+    dataPrimeiroClique = null; // Reseta o estado interno ao abrir o modal
 
     database.ref('agendamentos').once('value', snapshot => {
         const agendamentos = snapshot.val() || {};
@@ -179,66 +180,62 @@ function renderizarCalendario(idProduto) {
         calendarioInstancia = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             locale: 'pt-br',
-            selectable: true,
-            unselectAuto: false, // Impede que a seleção suma ao clicar fora
+            selectable: true, 
+            unselectAuto: false,
             headerToolbar: { left: 'prev,next', center: 'title', right: '' },
             events: eventosOcupados,
             aspectRatio: 1.35,
             contentHeight: 'auto',
 
-            // LÓGICA DE DOIS CLIQUES
+            // LÓGICA DE CLIQUE MANUAL (IGNORANDO O SELECT PADRÃO)
             dateClick: function(info) {
                 const inputIni = document.getElementById('reserva-ini');
                 const inputFim = document.getElementById('reserva-fim');
 
+                // Se for o primeiro clique ou se já tínhamos selecionado um período completo antes
                 if (!dataPrimeiroClique) {
-                    // PRIMEIRO CLIQUE: Define o início
                     dataPrimeiroClique = info.dateStr;
                     inputIni.value = info.dateStr;
-                    inputFim.value = ""; // Limpa o fim enquanto espera o segundo clique
+                    inputFim.value = ""; // Limpa o fim
                     
-                    // Visual: Seleciona visualmente apenas o primeiro dia
-                    calendarioInstancia.select(info.dateStr);
-                } else {
-                    // SEGUNDO CLIQUE: Define o fim
-                    let dataSegunda = info.dateStr;
-
-                    // Validação: Se clicar em uma data anterior à primeira, inverte as datas
+                    // Limpa seleções visuais anteriores e destaca o dia atual
+                    calendarioInstancia.unselect();
+                    calendarioInstancia.select(info.dateStr); 
+                    
+                    console.log("Primeiro clique em: " + dataPrimeiroClique);
+                } 
+                else {
+                    // SEGUNDO CLIQUE
                     let d1 = dataPrimeiroClique;
-                    let d2 = dataSegunda;
-                    if (d2 < d1) { [d1, d2] = [d2, d1]; }
+                    let d2 = info.dateStr;
+
+                    // Inverte se o cliente clicar em uma data anterior à primeira
+                    if (d2 < d1) {
+                        let temp = d1;
+                        d1 = d2;
+                        d2 = temp;
+                    }
 
                     inputIni.value = d1;
                     inputFim.value = d2;
 
-                    // Aplica a seleção visual no calendário
-                    // No FullCalendar, o select(start, end) é exclusivo no fim, então somamos 1 dia para colorir a célula do dia final
-                    let dFimVisual = new Date(d2);
-                    dFimVisual.setDate(dFimVisual.getDate() + 1);
-                    calendarioInstancia.select(d1, dFimVisual.toISOString().split('T')[0]);
+                    // Seleção visual (o FullCalendar pede +1 dia no fim para colorir o último dia)
+                    let dVisual = new Date(d2);
+                    dVisual.setDate(dVisual.getDate() + 1);
+                    calendarioInstancia.select(d1, dVisual.toISOString().split('T')[0]);
+
+                    console.log("Período fechado: " + d1 + " até " + d2);
 
                     // Dispara o cálculo de estoque
                     calcularEstoqueDisponivel(idProduto, d1, d2);
 
-                    // Reseta para permitir uma nova seleção de dois cliques se ele mudar de ideia
-                    dataPrimeiroClique = null;
+                    // RESET para a próxima tentativa
+                    dataPrimeiroClique = null; 
                 }
             },
 
-            // Mantemos o 'select' para caso ele ainda prefira arrastar (funciona dos dois jeitos agora)
-            select: function(info) {
-                const inputIni = document.getElementById('reserva-ini');
-                const inputFim = document.getElementById('reserva-fim');
-
-                inputIni.value = info.startStr;
-                let dFim = new Date(info.end);
-                dFim.setDate(dFim.getDate() - 1);
-                const dataFimFormatada = dFim.toISOString().split('T')[0];
-                inputFim.value = dataFimFormatada;
-
-                calcularEstoqueDisponivel(idProduto, info.startStr, dataFimFormatada);
-                dataPrimeiroClique = null; // Reseta se ele arrastar
-            }
+            // Desativamos o 'select' padrão para não dar conflito com o dateClick
+            selectAllow: function() { return false; } 
         });
 
         calendarioInstancia.render();
