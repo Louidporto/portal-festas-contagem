@@ -232,13 +232,19 @@ async function solicitarReserva() {
     const fone = document.getElementById('cliente-fone').value.replace(/\D/g, "");
     const endereco = document.getElementById('cliente-endereco').value;
     
-    // CAPTURA A QUANTIDADE DO SELECT
     const selectQtd = document.getElementById('select-quantidade-reserva');
     const quantidadeDesejada = parseInt(selectQtd.value) || 0;
 
     if(!ini || !fim) return alert("Selecione as datas no calendário!");
     if(!nome || !fone || !endereco) return alert("Por favor, preencha todos os campos.");
     if(quantidadeDesejada <= 0) return alert("Não há estoque disponível para este período.");
+
+    // --- A MUDANÇA COMEÇA AQUI ---
+    
+    // 1. Pegamos o contato do dono que veio do banco de dados (cadastrado no ADM)
+    // Se não existir no produto, usamos um número padrão como reserva (fallback)
+    const contatoDonoRaw = produtoSelecionado.whatsapp_dono || produtoSelecionado.contato || "5531999999999";
+    const foneFornecedor = contatoDonoRaw.replace(/\D/g, ""); // Limpa parênteses e espaços
 
     const dadosReserva = {
         produto_id: produtoSelecionado.id,
@@ -249,23 +255,29 @@ async function solicitarReserva() {
         cliente_nome: nome,
         cliente_fone: fone,
         cliente_endereco: endereco,
-        quantidade_alugada: quantidadeDesejada, // SALVANDO A QUANTIDADE ESCOLHIDA
+        quantidade_alugada: quantidadeDesejada,
         status: "pendente",
         timestamp: Date.now()
     };
 
     database.ref('solicitacoes').push(dadosReserva).then(() => {
-        const msg = `Olá! Fiz uma *solicitação de reserva*:%0A%0A` +
+        const msg = `Olá! Fiz uma *solicitação de reserva* pelo portal:%0A%0A` +
                     `*Produto:* ${produtoSelecionado.nome}%0A` +
-                    `*Quantidade:* ${quantidadeDesejada} unidade(s)%0A` + // INFO NA MENSAGEM
+                    `*Quantidade:* ${quantidadeDesejada} unidade(s)%0A` +
                     `*Período:* ${ini.split('-').reverse().join('/')} até ${fim.split('-').reverse().join('/')}%0A` +
-                    `*Cliente:* ${nome}`;
+                    `*Cliente:* ${nome}%0A` +
+                    `*Endereço:* ${endereco}`;
 
-        const foneFornecedor = "5531999999999"; // Seu número
-        window.open(`https://wa.me/${foneFornecedor}?text=${msg}`, '_blank');
+        // 2. Agora usamos a variável dinâmica foneFornecedor
+        const linkWhats = `https://wa.me/${foneFornecedor}?text=${msg}`;
         
-        alert("Solicitação enviada!");
+        window.open(linkWhats, '_blank');
+        
+        alert("Solicitação enviada com sucesso!");
         fecharModalCalendario();
+    }).catch(error => {
+        console.error("Erro ao salvar:", error);
+        alert("Erro ao enviar solicitação.");
     });
 }
 /**
