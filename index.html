@@ -102,6 +102,17 @@
                 <input type="date" id="reserva-fim" readonly>
             </div>
 
+            <div id="container-estoque-periodo" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px; display: none;">
+                <p style="font-size: 0.9em; color: #555; margin-bottom: 5px;">
+                    <i class="fas fa-boxes"></i> Disponibilidade para este período: 
+                    <span id="qtd-disponivel-periodo" style="font-weight: bold; color: #2ecc71;">0</span>
+                </p>
+                
+                <label style="font-size: 0.85em; font-weight: bold;">Quantidade desejada:</label>
+                <select id="select-quantidade-reserva" class="input-padrao" style="width: 100%; margin-top: 5px;">
+                    </select>
+            </div>
+
             <div class="dados-cliente-form" style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
                 <input type="text" id="cliente-nome" placeholder="Seu Nome Completo" required>
                 <input type="tel" id="cliente-fone" placeholder="Seu WhatsApp (apenas números)" required>
