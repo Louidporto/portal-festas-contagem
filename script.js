@@ -11,6 +11,26 @@ window.onload = function() {
 };
 
 /**
+ * GATILHOS PARA CÁLCULO DE ESTOQUE EM TEMPO REAL
+ */
+document.addEventListener('change', function(e) {
+    if (e.target && (e.target.id === 'reserva-ini' || e.target.id === 'reserva-fim')) {
+        const idProd = produtoSelecionado ? produtoSelecionado.id : null;
+        const dataIni = document.getElementById('reserva-ini').value;
+        const dataFim = document.getElementById('reserva-fim').value;
+
+        if (idProd && dataIni && dataFim) {
+            if (dataIni > dataFim) {
+                alert("A data de início não pode ser maior que a data de fim.");
+                return;
+            }
+            // Chama a função de cálculo que você já tem
+            calcularEstoqueDisponivel(idProd, dataIni, dataFim);
+        }
+    }
+});
+
+/**
  * 2. NAVEGAÇÃO DO PORTAL (Alternar Abas)
  */
 function alternarSecao(secaoAlvo) {
@@ -74,6 +94,7 @@ async function carregarCardapio() {
                 <div class="info-cardapio">
                     <span class="tag-categoria-cliente">${p.categoria || 'Geral'}</span>
                     <h3>${p.nome}</h3>
+                    <p style="font-size: 0.8rem; color: #777; margin-bottom: 8px;">${p.descricao || ''}</p>
                     <div class="estoque-badge">
                         <i class="fas fa-boxes"></i> Disponível hoje: 
                         <strong style="color: ${disponivelAgora > 0 ? '#27ae60' : '#e74c3c'}">
@@ -96,31 +117,35 @@ database.ref('agendamentos').on('value', () => {
 /**
  * 4. CONTROLE DO MODAL E CALENDÁRIO
  */
-async function abrirAgenda(idProduto) { // Adicionado 'async' aqui
-    // 1. Busca os dados primeiro
-    database.ref('produtos/' + idProduto).once('value', async snap => { // Adicionado 'async' no callback
+async function abrirAgenda(idProduto) {
+    // 1. Resetar a interface do estoque antes de carregar o novo produto
+    const containerEstoque = document.getElementById('container-estoque-periodo');
+    const selectQtd = document.getElementById('select-quantidade-reserva');
+    if (containerEstoque) containerEstoque.style.display = 'none';
+    if (selectQtd) selectQtd.innerHTML = "<option>Selecione as datas...</option>";
+
+    // 2. Busca os dados do produto
+    database.ref('produtos/' + idProduto).once('value', async snap => {
         const dados = snap.val();
         if (!dados) return;
 
         produtoSelecionado = { id: idProduto, ...dados };
         document.getElementById('nome-produto-modal').innerText = produtoSelecionado.nome;
 
-        // 2. MOSTRA O MODAL PRIMEIRO
+        // 3. Mostra o modal
         const modal = document.getElementById('modal-calendario');
         modal.style.setProperty('display', 'block', 'important');
 
-        // Define a data de hoje para a consulta inicial
+        // Define a data de hoje para a consulta inicial rápida
         const dataDeHoje = new Date().toISOString().split('T')[0];
-
-        // Agora o await vai funcionar porque a função é async
         const estoqueRestante = await verificarEstoqueDisponivel(idProduto, dataDeHoje, dataDeHoje);
         
         const infoEstoque = document.getElementById('info-estoque-modal');
         if(infoEstoque) {
-            infoEstoque.innerHTML = `Disponibilidade atual: <strong style="color: ${estoqueRestante > 0 ? 'green' : 'red'}">${estoqueRestante} unidade(s)</strong>`;
+            infoEstoque.innerHTML = `Disponibilidade geral: <strong style="color: ${estoqueRestante > 0 ? 'green' : 'red'}">${estoqueRestante} unidade(s)</strong>`;
         }
 
-        // 3. AGUARDA O NAVEGADOR RENDERIZAR O MODAL
+        // 4. Aguarda renderização para o FullCalendar
         setTimeout(() => {
             renderizarCalendario(idProduto);
         }, 150);
@@ -170,12 +195,22 @@ function renderizarCalendario(idProduto) {
                     right: '' 
                 },
                 events: eventosOcupados,
-            select: function(info) {
-                document.getElementById('reserva-ini').value = info.startStr;
-                let dFim = new Date(info.end);
-                dFim.setDate(dFim.getDate() - 1);
-                document.getElementById('reserva-fim').value = dFim.toISOString().split('T')[0];
-            }
+            // Dentro da configuração do FullCalendar em renderizarCalendario:
+                select: function(info) {
+                    const inputIni = document.getElementById('reserva-ini');
+                    const inputFim = document.getElementById('reserva-fim');
+
+                    inputIni.value = info.startStr;
+                    
+                    let dFim = new Date(info.end);
+                    dFim.setDate(dFim.getDate() - 1);
+                    const dataFimFormatada = dFim.toISOString().split('T')[0];
+                    inputFim.value = dataFimFormatada;
+
+                    // GATILHO: Dispara o cálculo de estoque assim que seleciona no calendário
+                    calcularEstoqueDisponivel(produtoSelecionado.id, info.startStr, dataFimFormatada);
+                }
+            
         });
 
         calendarioInstancia.render();
@@ -196,17 +231,14 @@ async function solicitarReserva() {
     const nome = document.getElementById('cliente-nome').value;
     const fone = document.getElementById('cliente-fone').value.replace(/\D/g, "");
     const endereco = document.getElementById('cliente-endereco').value;
+    
+    // CAPTURA A QUANTIDADE DO SELECT
+    const selectQtd = document.getElementById('select-quantidade-reserva');
+    const quantidadeDesejada = parseInt(selectQtd.value) || 0;
 
     if(!ini || !fim) return alert("Selecione as datas no calendário!");
     if(!nome || !fone || !endereco) return alert("Por favor, preencha todos os campos.");
-
-    // Verifica estoque antes de prosseguir
-    const disponivel = await verificarEstoqueDisponivel(produtoSelecionado.id, ini, fim);
-
-    if (disponivel <= 0) {
-        alert("Desculpe! Este brinquedo já está totalmente reservado para este período.");
-        return;
-    }
+    if(quantidadeDesejada <= 0) return alert("Não há estoque disponível para este período.");
 
     const dadosReserva = {
         produto_id: produtoSelecionado.id,
@@ -217,28 +249,23 @@ async function solicitarReserva() {
         cliente_nome: nome,
         cliente_fone: fone,
         cliente_endereco: endereco,
+        quantidade_alugada: quantidadeDesejada, // SALVANDO A QUANTIDADE ESCOLHIDA
         status: "pendente",
-        timestamp: Date.now(),
-        estoque_na_reserva: disponivel
+        timestamp: Date.now()
     };
 
     database.ref('solicitacoes').push(dadosReserva).then(() => {
-        const msg = `Olá! Acabei de fazer uma *solicitação de reserva* pelo portal:%0A%0A` +
+        const msg = `Olá! Fiz uma *solicitação de reserva*:%0A%0A` +
                     `*Produto:* ${produtoSelecionado.nome}%0A` +
+                    `*Quantidade:* ${quantidadeDesejada} unidade(s)%0A` + // INFO NA MENSAGEM
                     `*Período:* ${ini.split('-').reverse().join('/')} até ${fim.split('-').reverse().join('/')}%0A` +
-                    `*Cliente:* ${nome}%0A` +
-                    `*Endereço:* ${endereco}`;
+                    `*Cliente:* ${nome}`;
 
-        const foneFornecedor = (produtoSelecionado.whatsapp_dono || "5531999999999").replace(/\D/g, "");
-        const linkWhats = `https://wa.me/${foneFornecedor}?text=${msg}`;
-
-        window.open(linkWhats, '_blank');
-        alert("Solicitação enviada com sucesso!");
+        const foneFornecedor = "5531999999999"; // Seu número
+        window.open(`https://wa.me/${foneFornecedor}?text=${msg}`, '_blank');
         
+        alert("Solicitação enviada!");
         fecharModalCalendario();
-    }).catch(error => {
-        console.error("Erro ao salvar:", error);
-        alert("Erro ao enviar solicitação.");
     });
 }
 /**
@@ -366,4 +393,58 @@ async function verificarEstoqueDisponivel(idProduto, dataInicio, dataFim) {
     });
 
     return estoqueTotal - ocupados;
+}
+
+//  A Lógica de Cálculo (JavaScript)
+async function calcularEstoqueDisponivel(idProduto, dataInicio, dataFim) {
+    if (!dataInicio || !dataFim) return;
+
+    // 1. Busca o estoque total do produto
+    const prodSnap = await database.ref('produtos/' + idProduto).once('value');
+    const produto = prodSnap.val();
+    const estoqueTotal = parseInt(produto.estoque_total) || 1;
+
+    // 2. Busca todos os agendamentos ativos para este produto
+    const agendSnap = await database.ref('agendamentos')
+        .orderByChild('produto_id')
+        .equalTo(idProduto)
+        .once('value');
+    
+    const agendamentos = agendSnap.val() || {};
+    let ocupadosNoPeriodo = 0;
+
+    // 3. Verifica sobreposição de datas
+    // Lógica: O item está ocupado se (InicioPedida <= FimExistente) E (FimPedido >= InicioExistente)
+    Object.values(agendamentos).forEach(res => {
+        if (res.status !== 'finalizada') {
+            const resInicio = res.data_inicio;
+            const resFim = res.data_fim;
+
+            if (dataInicio <= resFim && dataFim >= resInicio) {
+                // Se você salva a quantidade alugada em cada reserva, some res.quantidade
+                // Se for sempre 1 por reserva, some 1
+                ocupadosNoPeriodo += (parseInt(res.quantidade_alugada) || 1);
+            }
+        }
+    });
+
+    const disponivel = estoqueTotal - ocupadosNoPeriodo;
+    const campoDisponivel = document.getElementById('qtd-disponivel-periodo');
+    const selectQtd = document.getElementById('select-quantidade-reserva');
+    const container = document.getElementById('container-estoque-periodo');
+
+    container.style.display = "block";
+    campoDisponivel.innerText = disponivel > 0 ? disponivel : 0;
+
+    // 4. Preenche o Select com as opções disponíveis
+    selectQtd.innerHTML = "";
+    if (disponivel <= 0) {
+        selectQtd.innerHTML = "<option value='0'>Indisponível para estas datas</option>";
+        selectQtd.disabled = true;
+    } else {
+        selectQtd.disabled = false;
+        for (let i = 1; i <= disponivel; i++) {
+            selectQtd.innerHTML += `<option value="${i}">${i} unidade(s)</option>`;
+        }
+    }
 }
