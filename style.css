@@ -31,11 +31,22 @@ body {
 .main-header {
     background: linear-gradient(135deg, var(--primary-blue), #003d80);
     color: white;
-    padding: 60px 20px;
+    padding: 10px 15px;
     text-align: center;
     border-radius: 0 0 50px 50px;
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);
     
+}
+
+h1 {
+    display: block;
+    font-size: 2em;
+    margin-block-start: 0.67em;
+    margin-block-end: 0.67em;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    font-weight: bold;
+    unicode-bidi: isolate;
 }
 
 .logo-container i { font-size: 3.5rem; margin-bottom: 15px; display: block; }
@@ -116,6 +127,37 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.05);
     cursor: pointer;
     transition: 0.3s;
+}
+
+.tag-categoria-cliente {
+    background: #e3f2fd;
+    color: #1976d2;
+    font-size: 0.7rem;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 10px;
+    text-transform: uppercase;
+}
+
+.estoque-badge {
+    font-size: 0.85rem;
+    color: #555;
+    margin: 8px 0;
+}
+
+.filtro-container {
+    padding: 15px;
+    text-align: center;
+    background: #f8f9fa;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+#filtro-categoria {
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    outline: none;
 }
 
 .card-item-cardapio:hover { transform: translateY(-5px); }
@@ -208,7 +250,13 @@ body {
 }
 
 .status-pendente { background: #ffeaa7; color: #d6a01d; }
-.status-confirmado { background: #d4edda; color: #155724; }
+.status-confirmado { background: var(--success-green);; color: darkgreen; }
+/* Adicione isso junto com os outros status-badge */
+.status-agendado { 
+    background: #d4edda; 
+    color: #155724; 
+    border: 1px solid #c3e6cb;
+}
 
 .barra-progresso {
     background: #eee;
