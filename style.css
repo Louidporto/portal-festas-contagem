@@ -72,8 +72,8 @@ body {
     height: auto;
     
     /* 4. Filtro de sombra na própria imagem (Efeito de profundidade 3D) */
-    /* Se a imagem for transparente, a sombra contorna a cama! */
-    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1));
+    /* Se a imagem for transparente, a sombra contorna a cama! 
+    filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1));*/
     
     margin-bottom: 10px;
 }
