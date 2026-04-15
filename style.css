@@ -29,7 +29,13 @@ body {
 
 /* --- HEADER DE MARKETING --- */
 .main-header {
-    background: linear-gradient(135deg, var(--primary-blue), #003d80);
+
+    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('imagens/cama.png');
+    
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    /*background: linear-gradient(135deg, var(--primary-blue), #003d80);*/
     color: white;
     padding: 10px 15px;
     text-align: center;
