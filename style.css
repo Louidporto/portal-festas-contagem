@@ -30,18 +30,17 @@ body {
 /* --- HEADER DE MARKETING --- */
 .main-header {
 
-    background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('imagens/cama.png');
+    background-image: url('imagens/cama.png');
     
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    /*background: linear-gradient(135deg, var(--primary-blue), #003d80);*/
     color: white;
     padding: 10px 15px;
     text-align: center;
     border-radius: 0 0 50px 50px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    
+    /*background: linear-gradient(135deg, var(--primary-blue), #003d80);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);*/    
 }
 
 h1 {
