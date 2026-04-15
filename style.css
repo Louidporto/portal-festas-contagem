@@ -31,14 +31,24 @@ body {
 .main-header {
 
     background-image: url('imagens/cama.png');
-    
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    color: white;
-    padding: 10px 15px;
+    
+    /* 1. MUDANÇA: Sombra mais forte e espalhada para dar profundidade */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+    
+    /* 2. MUDANÇA: Cor do texto (Se a imagem é branca, o texto precisa de cor!) */
+    color: #333; /* Use um cinza escuro ou a cor primária do seu sistema */
+    
+    /* Mantenha o restante */
+    padding: 40px 15px; /* Aumentei o padding para valorizar a imagem */
     text-align: center;
     border-radius: 0 0 50px 50px;
+    
+    /* Garante que o conteúdo fique acima da sombra */
+    position: relative; 
+    z-index: 10;
     /*background: linear-gradient(135deg, var(--primary-blue), #003d80);
     box-shadow: 0 4px 15px rgba(0,0,0,0.1);*/    
 }
