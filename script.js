@@ -480,24 +480,4 @@ async function calcularEstoqueDisponivel(idProduto, dataInicio, dataFim) {
         }
     }
 }
-function renderizarMidia(url) {
-    // Verifica se a URL contém extensões de vídeo
-    const ehVideo = url.toLowerCase().includes('.mp4') || url.toLowerCase().includes('.mov');
 
-    if (ehVideo) {
-        return `
-            <div class="container-video">
-                <video src="${url}" 
-                       class="midia-galeria" 
-                       autoplay 
-                       muted 
-                       loop 
-                       playsinline 
-                       style="width: 100%; border-radius: 15px; display: block;">
-                </video>
-                <div class="badge-video"><i class="fas fa-play"></i> VÍDEO</div>
-            </div>`;
-    } else {
-        return `<img src="${url}" class="midia-galeria" style="width: 100%; border-radius: 15px;">`;
-    }
-}
